@@ -7,6 +7,7 @@
 
 using namespace std;
 
+//交换a和b
 void swap(int &a, int &b){
 	int t=a;
 	a = b;
@@ -28,41 +29,40 @@ int hint_win_width=20;
 WINDOW * game_win, *hint_win ,*score_win;
 int key;
 
+//定义了一个Piece类
 class Piece
 {
 public:
-	int score;
-	int shape; 
+	int score;  //得分
+	int shape; 	//当前方块的形状
 	int next_shape;
 
-	int head_x;
+	int head_x;  //当前方块首个box的位置，标记位置
 	int head_y;
 
-	int size_h;
+	int size_h;  //当前方块的size
 	int size_w;
 
-	int next_size_h;
+	int next_size_h;  //下一个方块的size
 	int next_size_w;
 
 	int box_shape[4][4];
 	int next_box_shape[4][4];
 
-	int box_map[30][45];
+	int box_map[30][45];  //用来标记游戏框内的
 
 	bool game_over;
 
 public:
-	void initial();
-	void set_shape(int &cshape, int box_shape[][4],int &size_w, int & size_h);
+	void initial();  //初始化函数
+	void set_shape(int &cshape, int box_shape[][4],int &size_w, int & size_h);  //设置方块形状
 
-	void score_next();
-	void judge();
-	void move();
-	void rotate();
-	bool isaggin();
-	bool exsqr(int row);
-
-	
+	void score_next();  //显示下一个方块的形状以及分数
+	void judge();  //判断是否层满
+	void move();  //移动函数，通过方向键控制
+	void rotate();  //旋转函数
+	bool isaggin();  //判断下一次行动是否会越界或者重合
+	bool exsqr(int row);  //判断当前行是否为空	
 };
 
 int main()
@@ -170,10 +170,12 @@ void Piece::initial()
 
 void Piece::set_shape(int &cshape, int shape[][4],int &size_w,int &size_h)
 {
+	//首先将用来表示的4x4数组初始化为0
 	int i,j;
 	for(i=0;i<4;i++)
 		for(j=0;j<4;j++)
 			shape[i][j]=0;
+	//设置7种初始形状并设置它们的size
 	switch(cshape)
 	{
 		case 0:	
@@ -237,19 +239,20 @@ void Piece::set_shape(int &cshape, int shape[][4],int &size_w,int &size_h)
 			break;
 	}
 
+	//设置完形状以后初始化方块的起始位置
 	head_x=game_win_width/2;
 	head_y=1;
 
+	//如果刚初始化就重合了，游戏结束
 	if(isaggin())    /* GAME OVER ! */
 		game_over=true;
 
 }
 
-
 void Piece::rotate()
 {
-	int temp[4][4]={0};
-	int temp_piece[4][4]={0};
+	int temp[4][4]={0};  //临时变量
+	int temp_piece[4][4]={0};  //备份用的数组
 	int i,j,tmp_size_h,tmp_size_w;
 
 	tmp_size_w=size_w;
@@ -257,32 +260,33 @@ void Piece::rotate()
 
 	for(int i=0; i<4;i++)
 		for(int j=0;j<4;j++)
-			temp_piece[i][j]=box_shape[i][j];
+			temp_piece[i][j]=box_shape[i][j];  //备份一下当前的方块，如果旋转失败则返回到当前的形状
 
 
 	for(i=0;i<4;i++)
 		for(j=0;j<4;j++)
-			temp[j][i]=box_shape[i][j];
+			temp[j][i]=box_shape[i][j];  //斜对角线对称
 	i=size_h;
 	size_h=size_w;
 	size_w=i;
 	for(i=0;i<size_h;i++)
 		for(j=0;j<size_w;j++)
-			box_shape[i][size_w-1-j]=temp[i][j];
+			box_shape[i][size_w-1-j]=temp[i][j];  //左右对称
 
-
+	/*如果旋转以后重合，则返回到备份的数组形状*/
 	if(isaggin()){
 		for(int i=0; i<4;i++)
 			for(int j=0;j<4;j++)
 				box_shape[i][j]=temp_piece[i][j];
-		size_w=tmp_size_w;
+		size_w=tmp_size_w;  //记得size也要变回原来的size
 		size_h=tmp_size_h;
 	}
+	/*如果旋转成功，那么在屏幕上进行显示*/
 	else{
 		for(int i=0; i<4;i++)
 			for(int j=0;j<4;j++){
 				if(temp_piece[i][j]==1){
-					mvwaddch(game_win,head_y+i,head_x+j,' ');
+					mvwaddch(game_win,head_y+i,head_x+j,' ');  //移动到game_win窗口的某个坐标处打印字符
 					wrefresh(game_win);
 				}
 			}
@@ -406,11 +410,11 @@ bool Piece::isaggin(){
 	for(int i=0;i<size_h;i++)
 		for(int j=0;j<size_w;j++){
 			if(box_shape[i][j]==1){
-				if(head_y+i > game_win_height-2)
+				if(head_y+i > game_win_height-2)  //下面出界
 					return true;
-				if(head_x+j > game_win_width-2 || head_x+i-1<0)
+				if(head_x+j > game_win_width-2 || head_x+i-1<0)  //左右出界
 					return true;
-				if(box_map[head_y+i][head_x+j]==1)
+				if(box_map[head_y+i][head_x+j]==1)  //与已占用的box重合
 					return true ;
 			}
 		}
@@ -426,13 +430,13 @@ bool Piece::exsqr(int row){
 
 void Piece::judge(){
 	int i,j;
-	int line=0;
+	int line=0;  //记录层满的行数
 	bool full;
-	for(i=1;i<game_win_height-1;i++){
+	for(i=1;i<game_win_height-1;i++){  //除去边界
 		full=true;
 		for(j=1;j<game_win_width-1;j++){
-			if(box_map[i][j]==0)
-				full=false;
+			if(box_map[i][j]==0)  //存在未被占用的box
+				full=false;   //说明本层未满
 		}
 		if(full){
 			line++;
@@ -441,6 +445,7 @@ void Piece::judge(){
 				box_map[i][j]=0;
 		}
 	}
+	/*上面判断完后 看line的值,如果非 0 说明有层已满需要进行消除*/
 	if(line!=0){
 	for(i=game_win_height-2;i>=2;i--){
 		int s=i;
@@ -453,6 +458,7 @@ void Piece::judge(){
 		}
 	}
 
+	/*清空和移动标记完成以后就要屏幕刷新了，重新打印game_win*/
 	for(int i=1;i<game_win_height-1;i++)
 			for(int j=1;j<game_win_width-1;j++){
 				if(box_map[i][j]==1){
